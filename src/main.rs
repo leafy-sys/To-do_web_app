@@ -1,5 +1,3 @@
-// src/main.rs
-
 #[macro_use]
 extern crate rocket;
 
@@ -10,6 +8,7 @@ use mysql::*;
 use rocket::response::status;
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::State;
+use rocket_cors::{AllowedOrigins, CorsOptions};
 use std::env;
 use std::sync::Mutex;
 
@@ -29,22 +28,14 @@ struct DbConnPool {
 
 // Function to create a new database pool
 fn init_pool() -> Pool {
-    // Load environment variables from .env file
     dotenv().ok();
-
-    // Get the DATABASE_URL environment variable
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-    // Create Opts from the database URL
     let opts = Opts::from_url(&database_url).expect("Invalid database URL");
-
-    // Create a new connection pool
     Pool::new(opts).expect("Failed to create database pool")
 }
 
 // Rocket routes
 
-// List all tasks
 #[get("/tasks")]
 async fn list_tasks(db: &State<DbConnPool>) -> Json<Vec<Task>> {
     let pool = db.pool.lock().unwrap();
@@ -64,7 +55,6 @@ async fn list_tasks(db: &State<DbConnPool>) -> Json<Vec<Task>> {
     Json(tasks)
 }
 
-// Get a single task by ID
 #[get("/tasks/<task_id>")]
 async fn get_task(db: &State<DbConnPool>, task_id: u32) -> Option<Json<Task>> {
     let pool = db.pool.lock().unwrap();
@@ -87,7 +77,6 @@ async fn get_task(db: &State<DbConnPool>, task_id: u32) -> Option<Json<Task>> {
     result.map(Json)
 }
 
-// Create a new task
 #[post("/tasks", format = "json", data = "<task>")]
 async fn create_task(db: &State<DbConnPool>, task: Json<Task>) -> status::Created<Json<Task>> {
     let pool = db.pool.lock().unwrap();
@@ -113,7 +102,6 @@ async fn create_task(db: &State<DbConnPool>, task: Json<Task>) -> status::Create
     status::Created::new(format!("/tasks/{}", last_id)).body(Json(new_task))
 }
 
-// Update an existing task
 #[put("/tasks/<task_id>", format = "json", data = "<task>")]
 async fn update_task(db: &State<DbConnPool>, task_id: u32, task: Json<Task>) -> Option<Json<Task>> {
     let pool = db.pool.lock().unwrap();
@@ -138,7 +126,6 @@ async fn update_task(db: &State<DbConnPool>, task_id: u32, task: Json<Task>) -> 
     }
 }
 
-// Delete a task
 #[delete("/tasks/<task_id>")]
 async fn delete_task(db: &State<DbConnPool>, task_id: u32) -> status::NoContent {
     let pool = db.pool.lock().unwrap();
@@ -155,7 +142,6 @@ async fn delete_task(db: &State<DbConnPool>, task_id: u32) -> status::NoContent 
     status::NoContent
 }
 
-// Ensure the tasks table exists
 fn init_db() {
     let pool = init_pool();
     let mut conn = pool.get_conn().unwrap();
@@ -170,16 +156,35 @@ fn init_db() {
     .unwrap();
 }
 
-// Launch the Rocket application
+// Set up and configure CORS
+fn cors_options() -> rocket_cors::Cors {
+    let allowed_origins = AllowedOrigins::some_exact(&[
+        "http://localhost:8000",  // Add more allowed origins here
+        "http://yourwebsite.com", // Example
+    ]);
+
+    CorsOptions {
+        allowed_origins,
+        allow_credentials: true,
+        ..Default::default()
+    }
+    .to_cors()
+    .expect("Failed to create CORS options")
+}
+
 #[launch]
-fn rocket() -> _ {
+fn rocket() -> rocket::Rocket<rocket::Build> {
     init_db();
+
     let db_pool = DbConnPool {
         pool: Mutex::new(init_pool()),
     };
 
-    rocket::build().manage(db_pool).mount(
-        "/",
-        routes![list_tasks, get_task, create_task, update_task, delete_task],
-    )
+    rocket::build()
+        .manage(db_pool)
+        .attach(cors_options()) // Attach CORS options
+        .mount(
+            "/",
+            routes![list_tasks, get_task, create_task, update_task, delete_task],
+        )
 }
