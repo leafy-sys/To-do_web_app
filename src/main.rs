@@ -163,14 +163,22 @@ fn cors_options() -> rocket_cors::Cors {
         "http://www.techsbible.com",
     ]);
 
-    CorsOptions {
-        allowed_origins,
-        allow_credentials: true,
-        ..Default::default()
-    }
-    .to_cors()
-    .expect("Failed to create CORS options")
+ CorsOptions {
+    allowed_origins,
+    allowed_methods: vec![
+        Method::Get, 
+        Method::Post, 
+        Method::Put,  // Ensure PUT is allowed
+        Method::Delete
+    ]
+    .into_iter()
+    .map(From::from)
+    .collect(),
+    allow_credentials: true,
+    ..Default::default()
 }
+.to_cors()
+.expect("Failed to create CORS options")
 
 #[launch]
 fn rocket() -> _ {
