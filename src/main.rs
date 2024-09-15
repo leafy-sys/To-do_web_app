@@ -161,8 +161,6 @@ fn cors_options() -> rocket_cors::Cors {
     let allowed_origins = AllowedOrigins::some_exact(&[
         "http://localhost:8000", // Add more allowed origins here
         "http://www.techsbible.com",
-        "http://www.techsbible.com/todo",
-        "http://www.techsbible.com/api/tasks",
     ]);
 
     CorsOptions {
@@ -175,18 +173,30 @@ fn cors_options() -> rocket_cors::Cors {
 }
 
 #[launch]
-fn rocket() -> rocket::Rocket<rocket::Build> {
-    init_db();
+fn rocket() -> _ {
+    let cors = CorsOptions {
+        allowed_origins: AllowedOrigins::some_exact(&["http://www.techsbible.com"]),
+        allowed_methods: vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+            .into_iter()
+            .map(|s| s.parse().unwrap())
+            .collect(),
+        allowed_headers: rocket_cors::AllowedHeaders::all(),
+        allow_credentials: true,
+        ..Default::default()
+    }
+    .to_cors()
+    .expect("Error building CORS");
 
+    init_db();
     let db_pool = DbConnPool {
         pool: Mutex::new(init_pool()),
     };
 
     rocket::build()
         .manage(db_pool)
-        .attach(cors_options()) // Attach CORS options
         .mount(
             "/",
             routes![list_tasks, get_task, create_task, update_task, delete_task],
         )
+        .attach(cors) // Attach CORS
 }
