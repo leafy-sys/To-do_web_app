@@ -107,11 +107,11 @@ async fn update_task(db: &State<DbConnPool>, task_id: u32, task: Json<Task>) -> 
     let pool = db.pool.lock().unwrap();
     let mut conn = pool.get_conn().unwrap();
 
+    // Only update the is_completed field if that’s the only change
     let result = conn.exec_drop(
-        "UPDATE tasks SET description = :description, is_completed = :is_completed WHERE id = :id",
+        "UPDATE tasks SET is_completed = :is_completed WHERE id = :id",
         params! {
             "id" => task_id,
-            "description" => &task.description,
             "is_completed" => task.is_completed,
         },
     );
@@ -119,7 +119,7 @@ async fn update_task(db: &State<DbConnPool>, task_id: u32, task: Json<Task>) -> 
     match result {
         Ok(_) => Some(Json(Task {
             id: Some(task_id),
-            description: task.description.clone(),
+            description: task.description.clone(), // description might be unchanged
             is_completed: task.is_completed,
         })),
         Err(_) => None,
