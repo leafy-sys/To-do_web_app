@@ -160,9 +160,9 @@ fn init_db() {
 fn cors_options() -> rocket_cors::Cors {
     let allowed_origins = AllowedOrigins::some_exact(&[
         "http://localhost:8000", // Add more allowed origins here
-        "http://techsbible.com",
-        "http://techsbible.com/todo",
-        "http://techsbible.com/api/tasks",
+        "http://www.techsbible.com",
+        "http://www.techsbible.com/todo",
+        "http://www.techsbible.com/api/tasks",
     ]);
 
     CorsOptions {
