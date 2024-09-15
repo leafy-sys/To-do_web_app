@@ -5,6 +5,7 @@ use dotenv::dotenv;
 use mysql::prelude::*;
 use mysql::Opts;
 use mysql::*;
+use rocket::http::Method;
 use rocket::response::status;
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::State;
@@ -156,29 +157,22 @@ fn init_db() {
     .unwrap();
 }
 
-// Set up and configure CORS
 fn cors_options() -> rocket_cors::Cors {
-    let allowed_origins = AllowedOrigins::some_exact(&[
-        "http://localhost:8000", // Add more allowed origins here
-        "http://www.techsbible.com",
-    ]);
+    let allowed_origins =
+        AllowedOrigins::some_exact(&["http://localhost:8000", "http://www.techsbible.com"]);
 
- CorsOptions {
-    allowed_origins,
-    allowed_methods: vec![
-        Method::Get, 
-        Method::Post, 
-        Method::Put,  // Ensure PUT is allowed
-        Method::Delete
-    ]
-    .into_iter()
-    .map(From::from)
-    .collect(),
-    allow_credentials: true,
-    ..Default::default()
+    CorsOptions {
+        allowed_origins,
+        allowed_methods: vec![Method::Get, Method::Post, Method::Put, Method::Delete]
+            .into_iter()
+            .map(From::from)
+            .collect(),
+        allow_credentials: true,
+        ..Default::default()
+    }
+    .to_cors()
+    .expect("Failed to create CORS options")
 }
-.to_cors()
-.expect("Failed to create CORS options")
 
 #[launch]
 fn rocket() -> _ {
