@@ -5,6 +5,7 @@ use dotenv::dotenv;
 use mysql::prelude::*;
 use mysql::Opts;
 use mysql::*;
+use rocket::fairing::AdHoc;
 use rocket::http::Method;
 use rocket::response::status;
 use rocket::serde::{json::Json, Deserialize, Serialize};
@@ -163,10 +164,16 @@ fn cors_options() -> rocket_cors::Cors {
 
     CorsOptions {
         allowed_origins,
-        allowed_methods: vec![Method::Get, Method::Post, Method::Put, Method::Delete, Method::Options]
-            .into_iter()
-            .map(From::from)
-            .collect(),
+        allowed_methods: vec![
+            Method::Get,
+            Method::Post,
+            Method::Put,
+            Method::Delete,
+            Method::Options,
+        ]
+        .into_iter()
+        .map(From::from)
+        .collect(),
         allow_credentials: true,
         ..Default::default()
     }
@@ -175,8 +182,8 @@ fn cors_options() -> rocket_cors::Cors {
 }
 
 #[options("/<_..>")]
-fn all_options() -> rocket::HTTP::Status {
-    rocket::HTTP::Status::ok
+fn all_options() -> rocket::http::Status {
+    rocket::http::Status::Ok
 }
 
 #[launch]
@@ -188,11 +195,8 @@ fn rocket() -> _ {
 
     rocket::build()
         .manage(db_pool)
-        .mount(
-            "/",
-            routes![all_options],
-        )
-         .attach(AdHoc::on_ignite("CORS", |rocket| async {
+        .mount("/", routes![all_options])
+        .attach(AdHoc::on_ignite("CORS", |rocket| async {
             rocket.attach(cors_options())
         }))
 }
