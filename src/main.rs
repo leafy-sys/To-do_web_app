@@ -109,11 +109,11 @@ async fn update_task(db: &State<DbConnPool>, task_id: u32, task: Json<Task>) -> 
     let pool = db.pool.lock().unwrap();
     let mut conn = pool.get_conn().unwrap();
 
-    // Only update the is_completed field if that’s the only change
     let result = conn.exec_drop(
-        "UPDATE tasks SET is_completed = :is_completed WHERE id = :id",
+        "UPDATE tasks SET description = :description, is_completed = :is_completed WHERE id = :id",
         params! {
             "id" => task_id,
+            "description" => &task.description,
             "is_completed" => task.is_completed,
         },
     );
@@ -121,7 +121,7 @@ async fn update_task(db: &State<DbConnPool>, task_id: u32, task: Json<Task>) -> 
     match result {
         Ok(_) => Some(Json(Task {
             id: Some(task_id),
-            description: task.description.clone(), // description might be unchanged
+            description: task.description.clone(),
             is_completed: task.is_completed,
         })),
         Err(_) => None,
@@ -144,6 +144,7 @@ async fn delete_task(db: &State<DbConnPool>, task_id: u32) -> status::NoContent 
     status::NoContent
 }
 
+// Initialize the database
 fn init_db() {
     let pool = init_pool();
     let mut conn = pool.get_conn().unwrap();
@@ -158,6 +159,7 @@ fn init_db() {
     .unwrap();
 }
 
+// Set up and configure CORS
 fn cors_options() -> rocket_cors::Cors {
     let allowed_origins =
         AllowedOrigins::some_exact(&["http://localhost:8000", "http://www.techsbible.com"]);
@@ -195,8 +197,17 @@ fn rocket() -> _ {
 
     rocket::build()
         .manage(db_pool)
-        .mount("/", routes![all_options])
-        .attach(AdHoc::on_ignite("CORS", |rocket| async {
-            rocket.attach(cors_options())
-        }))
+        .mount(
+            "/",
+            routes![
+                list_tasks,
+                get_task,
+                create_task,
+                update_task,
+                delete_task,
+                all_options
+            ],
+        )
+        .attach(cors_options())
 }
+
