@@ -5,7 +5,6 @@ use dotenv::dotenv;
 use mysql::prelude::*;
 use mysql::Opts;
 use mysql::*;
-use rocket::fairing::AdHoc;
 use rocket::http::Method;
 use rocket::response::status;
 use rocket::serde::{json::Json, Deserialize, Serialize};
