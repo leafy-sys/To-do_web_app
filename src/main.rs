@@ -174,6 +174,11 @@ fn cors_options() -> rocket_cors::Cors {
     .expect("Failed to create CORS options")
 }
 
+#[options("/<_..>")]
+fn all_options() -> rocket::HTTP::Status {
+    rocket::HTTP::Status::ok
+}
+
 #[launch]
 fn rocket() -> _ {
     init_db();
@@ -185,7 +190,9 @@ fn rocket() -> _ {
         .manage(db_pool)
         .mount(
             "/",
-            routes![list_tasks, get_task, create_task, update_task, delete_task],
+            routes![all_options],
         )
-        .attach(cors_options()) // Attach CORS
+         .attach(AdHoc::on_ignite("CORS", |rocket| async {
+            rocket.attach(cors_options())
+        }))
 }
