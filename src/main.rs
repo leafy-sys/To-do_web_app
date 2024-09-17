@@ -163,7 +163,6 @@ fn cors_options() -> rocket_cors::Cors {
     let allowed_origins =
         AllowedOrigins::some_exact(&[
             "http://localhost:8000", 
-            "http://www.techsbible.com",
             "http://techsbible.com",
         ]);
 
